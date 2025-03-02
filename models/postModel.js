@@ -5,16 +5,19 @@ const postSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  description: {
-    type: String,
+  // description: {
+  //   type: String,
     
-  },
-  longdescription: {
-    type: String,
-  },
+  // },
+  // longdescription: {
+  //   type: String,
+  // },
   carpetType: {
     type: String,
     required: true,
+  },
+  subCategory: {
+    type: String,
   },
   imageUrl: {
     type: String,

@@ -1,53 +1,69 @@
 const express = require('express');
 const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
+// const { storage } = require('../storage/storage');
 const postController = require('../controllers/postcontroller');
 const Post = require('../models/postModel');
-
-env = require('dotenv').config();
-
 const router = express.Router();
+const {handleUpload} = require('../helper')
 
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+  const storage = multer.memoryStorage();
+  const upload = multer({ storage });
+  const myUploadMiddleware = upload.single('image');
 
-// Configure multer for Cloudinary storage
-// const storage = new CloudinaryStorage({
-//     cloudinary: cloudinary,
-//     params: {
-//         folder: 'uploads', // Cloudinary folder name
-//         format: async (req, file) => 'png', // supports jpg, png, etc.
-//         public_id: (req, file) => `${Date.now()}-${file.originalname}`,
-//     },
-// });
-
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-      folder: 'uploads',
-      format: async (req, file) => 'png',
-      public_id: (req, file) => `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`, 
-  },
-});
+  function runMiddleware(req, res, fn) {
+    return new Promise((resolve, reject) => {
+      fn(req, res, (result) => {
+        if (result instanceof Error) {
+          return reject(result);
+        }
+        return resolve(result);
+      });
+    });
+  }
 
 
-const upload = multer({ storage });
-router.post('/create-post', upload.single('image'), postController.createPost);
+  const middleware = async (req, res, next) => {
+    try {
+      await myUploadMiddleware(req, res, async (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Multer error", error: err.message });
+        }
+  
+        if (!req.file) {
+          return next(); // No file uploaded, continue without setting imageUrl
+        }
+  
+        const b64 = Buffer.from(req.file.buffer).toString("base64");
+        let dataURI = `data:${req.file.mimetype};base64,${b64}`;
+  
+        try {
+          const cldRes = await handleUpload(dataURI);
+          req.body.imageUrl = cldRes.secure_url; // Attach Cloudinary URL to request body
+          next(); // Proceed to the controller
+        } catch (uploadError) {
+          console.error(uploadError);
+          return res.status(500).json({ message: "Cloudinary upload failed", error: uploadError.message });
+        }
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: error.message });
+    }
+  };
+  
+
+router.post('/create-post', middleware, postController.createPost);
+
+
 
 router.get('/carpets', async (req, res) => {
   try {
-    const { type } = req.query; 
-    const carpets = await Post.find(type ? { carpetType: type } : {}); 
+    const { type } = req.query;
+    const carpets = await Post.find(type ? { carpetType: type } : {});
     res.status(200).json(carpets);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-
-
 
 module.exports = router;
