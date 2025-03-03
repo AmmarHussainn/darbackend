@@ -45,65 +45,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// app.post('/api/contact', (req, res) => {
-//   const { name, email, message, selectedCarpet } = req.body;
-
-//   // **Check if required fields are present**
-//   if (
-//     !email ||
-//     !name ||
-//     !selectedCarpet?.carpetName ||
-//     !selectedCarpet?.imageUrl
-//   ) {
-//     return res.status(400).json({ message: 'Missing required fields' });
-//   }
-
-//   console.log('User Email:', email);
-//   console.log('Selected Carpet:', selectedCarpet);
-//   // SAVE INTO DATABASE
-
-//   // **1. Email to Admin**
-//   const adminMailOptions = {
-//     from: email, // User's email
-//     to: process.env.EMAIL_USER, // Admin's email
-//     subject: `Inquiry about ${selectedCarpet.carpetName}`,
-//     text: `Name: ${name}
-// Email: ${email}
-// Carpet: ${selectedCarpet.carpetName}
-// Message: ${message || 'No message provided'}`,
-//     attachments: [
-//       {
-//         filename: `${selectedCarpet.carpetName}.jpg`, // Use the carpet name as the filename
-//         path: selectedCarpet.imageUrl, // URL of the image to be attached
-//         cid: 'carpetImage', // Optional content ID for embedding in HTML email (if needed)
-//       },
-//     ],
-//   };
-
-//   const userMailOptions = {
-//     from: process.env.EMAIL_USER, // Admin's email
-//     to: email, // User's email
-//     subject: 'Thank you for your inquiry',
-//     text: `Hello ${name},
-
-// Thank you for reaching out about "${selectedCarpet.carpetName}". We have received your inquiry and will get back to you soon.
-
-// Best regards,
-// Al Dar Carpet`,
-//   };
-
-//   // **Send both emails in parallel**
-//   Promise.all([
-//     transporter.sendMail(adminMailOptions),
-//     transporter.sendMail(userMailOptions),
-//   ])
-//     .then(() => res.status(200).json({ message: 'Emails sent successfully' }))
-//     .catch((error) => {
-//       console.error('Email Error:', error);
-//       res.status(500).json({ message: 'Failed to send emails' });
-//     });
-// });
-
 app.post('/api/contact', (req, res) => {
   const { name, email, message, selectedCarpet, phone  ,selectedid} = req.body;
 
