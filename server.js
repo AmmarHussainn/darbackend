@@ -1,5 +1,6 @@
 
 const express = require('express');
+const jwt = require("jsonwebtoken");
 const dotenv = require('dotenv');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -25,8 +26,15 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json()); // To parse JSON bodies
+app.use(express.json()); 
 app.use(bodyParser.json());
+
+
+const SECRET_KEY = process.env.SECRET_KEY || "XKdCZhTVsnyOYoYJ";
+
+// Hardcoded password (ONLY FOR YOU)
+const OWNER_PASSWORD = process.env.OWNER_PASSWORD || "myCarpet1247$";
+
 
 // MongoDB Connection
 mongoose
@@ -36,6 +44,44 @@ mongoose
 
 // Routes
 app.use('/uploads', express.static('uploads'));
+
+
+
+
+app.post("/api/login", (req, res) => {
+  const { password } = req.body;
+
+  if (password === OWNER_PASSWORD) {
+    // Generate JWT Token (valid for 2 hours)
+    const token = jwt.sign({ user: "owner" }, SECRET_KEY, { expiresIn: "2h" });
+    return res.json({ success: true, token });
+  }
+
+  return res.status(401).json({ success: false, message: "Invalid password" });
+});
+
+// ✅ Middleware to Protect Routes
+const verifyToken = (req, res, next) => {
+  const token = req.headers["authorization"];
+
+  if (!token) {
+    return res.status(403).json({ message: "No token provided" });
+  }
+
+  jwt.verify(token, SECRET_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+    req.user = decoded;
+    next();
+  });
+};
+
+app.get("/api/dashboard", verifyToken, (req, res) => {
+  res.json({ message: "Welcome to your secure dashboard!" });
+});
+
+
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -203,26 +249,6 @@ app.delete('/api/carpets/:id', async (req, res) => {
   }
 });
 
-// app.put('/api/carpets/:id', async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const updatedCarpet = await Post.findByIdAndUpdate(id, req.body, { new: true });
-
-//     if (!updatedCarpet) {
-//       return res.status(404).json({ message: "Carpet not found" });
-//     }
-
-//     res.json(updatedCarpet);
-//   } catch (error) {
-//     console.error("Error updating carpet:", error);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// });
-
-
-
-
-// Start server
 
 app.put('/api/carpets/:id', upload.single("image"), async (req, res) => {
   try {
