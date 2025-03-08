@@ -283,6 +283,11 @@ app.put('/api/carpets/:id', upload.single("image"), async (req, res) => {
 });
 
 
+app.get("/", (req, res) => {
+  res.status(200).send("Server is running!");
+});
+
+
 app.listen(port, () => {
   console.log(`Backend running on http://localhost:${port}`);
 });
