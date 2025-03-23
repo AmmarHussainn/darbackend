@@ -1,6 +1,5 @@
-
 const express = require('express');
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -10,14 +9,15 @@ const nodemailer = require('nodemailer');
 const Order = require('./models/orderModel');
 const Post = require('./models/postModel');
 const cloudinary = require('cloudinary').v2;
-const multer = require("multer");
+const multer = require('multer');
+
 const upload = multer({ storage: multer.memoryStorage() }); // Stores file in memory
+const blogRoutes = require("./routes/blogRoutes");
 
-
-cloudinary.config({ 
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
-  api_key: process.env.CLOUDINARY_API_KEY, 
-  api_secret: process.env.CLOUDINARY_API_SECRET 
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 dotenv.config();
 
@@ -26,15 +26,13 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json()); 
+app.use(express.json());
 app.use(bodyParser.json());
 
-
-const SECRET_KEY = process.env.SECRET_KEY || "XKdCZhTVsnyOYoYJ";
+const SECRET_KEY = process.env.SECRET_KEY || 'XKdCZhTVsnyOYoYJ';
 
 // Hardcoded password (ONLY FOR YOU)
-const OWNER_PASSWORD = process.env.OWNER_PASSWORD || "myCarpet1247$";
-
+const OWNER_PASSWORD = process.env.OWNER_PASSWORD || 'myCarpet1247$';
 
 // MongoDB Connection
 mongoose
@@ -45,43 +43,38 @@ mongoose
 // Routes
 app.use('/uploads', express.static('uploads'));
 
-
-
-
-app.post("/api/login", (req, res) => {
+app.post('/api/login', (req, res) => {
   const { password } = req.body;
 
   if (password === OWNER_PASSWORD) {
     // Generate JWT Token (valid for 2 hours)
-    const token = jwt.sign({ user: "owner" }, SECRET_KEY, { expiresIn: "2h" });
+    const token = jwt.sign({ user: 'owner' }, SECRET_KEY, { expiresIn: '2h' });
     return res.json({ success: true, token });
   }
 
-  return res.status(401).json({ success: false, message: "Invalid password" });
+  return res.status(401).json({ success: false, message: 'Invalid password' });
 });
 
 // ✅ Middleware to Protect Routes
 const verifyToken = (req, res, next) => {
-  const token = req.headers["authorization"];
+  const token = req.headers['authorization'];
 
   if (!token) {
-    return res.status(403).json({ message: "No token provided" });
+    return res.status(403).json({ message: 'No token provided' });
   }
 
   jwt.verify(token, SECRET_KEY, (err, decoded) => {
     if (err) {
-      return res.status(401).json({ message: "Invalid token" });
+      return res.status(401).json({ message: 'Invalid token' });
     }
     req.user = decoded;
     next();
   });
 };
 
-app.get("/api/dashboard", verifyToken, (req, res) => {
-  res.json({ message: "Welcome to your secure dashboard!" });
+app.get('/api/dashboard', verifyToken, (req, res) => {
+  res.json({ message: 'Welcome to your secure dashboard!' });
 });
-
-
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -92,7 +85,7 @@ const transporter = nodemailer.createTransport({
 });
 
 app.post('/api/contact', (req, res) => {
-  const { name, email, message, selectedCarpet, phone  ,selectedid} = req.body;
+  const { name, email, message, selectedCarpet, phone, selectedid } = req.body;
 
   // **Check if required fields are present**
   if (
@@ -106,16 +99,16 @@ app.post('/api/contact', (req, res) => {
 
   console.log('User Email:', email);
   console.log('Selected Carpet:', selectedCarpet);
-   console.log('User Phone:', phone);
-   console.log(req.body , "body");
-  
+  console.log('User Phone:', phone);
+  console.log(req.body, 'body');
+
   const newOrder = new Order({
     customerName: name,
     customerEmail: email,
-    customerPhone: phone || '', 
+    customerPhone: phone || '',
     selectedCarpet: selectedid,
     carpetName: name,
-    message: message || '', 
+    message: message || '',
   });
 
   newOrder
@@ -130,7 +123,7 @@ app.post('/api/contact', (req, res) => {
       Carpet: ${selectedCarpet.carpetName}
       Phone: ${phone},
      Message: ${message || 'No message provided'}`,
-        
+
         attachments: [
           {
             filename: `${selectedCarpet.carpetName}.jpg`, // Use the carpet name as the filename
@@ -174,7 +167,7 @@ Al Dar Carpet`,
 });
 app.get('/api/messages', async (req, res) => {
   try {
-    const messages = await Order.find(); 
+    const messages = await Order.find();
     res.status(200).json(messages);
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -216,7 +209,6 @@ app.post('/api/generalinquiry', (req, res) => {
 
 app.use('/api', postRoutes);
 
-
 app.delete('/api/carpets/:id', async (req, res) => {
   console.log('Delete request received:', req.params);
 
@@ -230,10 +222,10 @@ app.delete('/api/carpets/:id', async (req, res) => {
     if (!carpet) {
       return res.status(404).json({ error: 'Carpet not found' });
     }
-    let cloudinaryPublicId = carpet.imagePublicId;  
+    let cloudinaryPublicId = carpet.imagePublicId;
     if (!cloudinaryPublicId && carpet.imageUrl) {
       const urlParts = carpet.imageUrl.split('/');
-      cloudinaryPublicId = urlParts.slice(-2).join('/').split('.')[0]; 
+      cloudinaryPublicId = urlParts.slice(-2).join('/').split('.')[0];
     }
 
     await Post.findByIdAndDelete(id);
@@ -242,51 +234,56 @@ app.delete('/api/carpets/:id', async (req, res) => {
       await cloudinary.uploader.destroy(cloudinaryPublicId);
     }
 
-    res.status(204).send(); 
+    res.status(204).send();
   } catch (error) {
     console.error('Error deleting carpet:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-
-app.put('/api/carpets/:id', upload.single("image"), async (req, res) => {
+app.put('/api/carpets/:id', upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
     let updateData = { ...req.body };
-    console.log(updateData , "Updated");
-    
+    console.log(updateData, 'Updated');
+
     const existingCarpet = await Post.findById(id);
     if (!existingCarpet) {
-      return res.status(404).json({ message: "Carpet not found" });
+      return res.status(404).json({ message: 'Carpet not found' });
     }
 
-    console.log(req.body, "req.body"); // Should now contain form fields
+    console.log(req.body, 'req.body'); // Should now contain form fields
 
     if (req.file) {
       // Upload image if new file is provided
-      const uploadResponse = await cloudinary.uploader.upload(req.file.buffer.toString("base64"), {
-        folder: "uploads"
-      });
+      const uploadResponse = await cloudinary.uploader.upload(
+        req.file.buffer.toString('base64'),
+        {
+          folder: 'uploads',
+        }
+      );
 
       updateData.image = uploadResponse.secure_url;
     }
-    console.log(updateData , "Updated3");
+    console.log(updateData, 'Updated3');
     // Update the carpet
-    const updatedCarpet = await Post.findByIdAndUpdate(id, updateData, { new: true });
-      
+    const updatedCarpet = await Post.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
+
     res.json(updatedCarpet);
   } catch (error) {
-    console.error("Error updating carpet:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error('Error updating carpet:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
 
-app.get("/", (req, res) => {
-  res.status(200).send("Server is running!");
-});
+app.use("/api/blogs", blogRoutes);
 
+app.get('/', (req, res) => {
+  res.status(200).send('Server is running!');
+});
 
 app.listen(port, () => {
   console.log(`Backend running on http://localhost:${port}`);
